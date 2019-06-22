@@ -1,0 +1,49 @@
+version: "3"
+
+networks:
+  public: {}
+
+volumes:
+  grafana_lib: {}
+  prometheus_data: {}
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.10.0
+    ports:
+      - 9090:9090
+    networks:
+      - public
+    volumes:
+      - prometheus_data:/prometheus
+      - ${PWD}/prometheus-config:/etc/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:6.2.4
+    ports:
+      - 3000:3000
+    networks:
+      - public
+    volumes:
+      - grafana_lib:/var/lib/grafana
+      - ${PWD}/grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+
+  go-app:
+    image: golang:1.12-alpine
+    ports:
+      - 8888:8888
+      - 8181:8181
+    networks:
+      - public
+    working_dir: /go/src/github.com/laher/observable
+    volumes:
+      - "$PWD:/go/src/github.com/laher/observable"
+    entrypoint: go run main.go
+    environment:
+      CGO_ENABLED: "0"
+      GO111MODULE: "auto"
